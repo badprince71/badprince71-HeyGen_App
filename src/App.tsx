@@ -8,6 +8,8 @@ import Mascots from "./pages/Mascots";
 import Text from "./pages/Text";
 import Background from "./pages/Background";
 import Videos from "./pages/Videos";
+import MyVideo from "./pages/MyVideo";
+import MyProfile from "./pages/MyProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/text" element={<Text />} />
             <Route path="/background" element={<Background />} />
             <Route path="/video" element={<Videos />} />
+            <Route path="/myvideo" element={<MyVideo />} />
+            <Route path="/myprofile" element={<MyProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

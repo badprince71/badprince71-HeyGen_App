@@ -36,29 +36,29 @@ export default function Background() {
   return (
     <div className="min-h-screen bg-background">
       <ProgressNav />
-      <div className="container mx-auto p-6 py-12 space-y-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="space-y-2 animate-slide-in-up text-center">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 sm:space-y-8">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+          <div className="space-y-2 animate-slide-in-up text-center px-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               Choose Your Stage
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base sm:text-lg">
               Select the perfect setting for your video presentation
             </p>
           </div>
 
           {/* Preview section */}
           <Card className="animate-slide-in-up bg-card/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-8">
-              <div className="flex items-center gap-6">
+            <CardContent className="p-4 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 <div className="flex-shrink-0">
                   <img
                     src={selectedMascot.image}
                     alt={selectedMascot.name}
-                    className="w-32 h-32 rounded-3xl object-cover shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl object-cover shadow-lg"
                   />
                 </div>
-                <div className="flex-1 space-y-3">
+                <div className="flex-1 space-y-3 text-center sm:text-left w-full">
                   <div>
                     <h3 className="font-semibold text-xl mb-1">{selectedMascot.name}</h3>
                     <p className="text-sm text-muted-foreground">{selectedMascot.category}</p>
@@ -72,7 +72,7 @@ export default function Background() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {backgrounds.map((background, index) => (
               <Card
                 key={background.id}
@@ -107,8 +107,13 @@ export default function Background() {
             ))}
           </div>
 
-          <div className="flex justify-between pt-4">
-            <Button variant="outline" size="default" onClick={() => navigate("/text")}>
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-4 px-4 sm:px-0">
+            <Button 
+              variant="outline" 
+              size="default" 
+              onClick={() => navigate("/text")}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
@@ -117,6 +122,7 @@ export default function Background() {
               variant="hero"
               onClick={handleContinue}
               disabled={!selectedBackground}
+              className="w-full sm:w-auto min-h-[44px]"
             >
               Generate Video
             </Button>

@@ -56,13 +56,13 @@ export default function Text() {
   return (
     <div className="min-h-screen bg-background">
       <ProgressNav />
-      <div className="container mx-auto p-6 py-12 space-y-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-2 animate-slide-in-up">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 sm:space-y-8">
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+          <div className="text-center space-y-2 animate-slide-in-up px-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               Client Information
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base sm:text-lg">
               Enter details to personalize your video presentation
             </p>
           </div>
@@ -92,12 +92,13 @@ export default function Text() {
                     variant="outline"
                     size="default"
                     onClick={() => document.getElementById('file-upload')?.click()}
+                    className="w-full sm:w-auto min-h-[44px]"
                   >
                     <Upload className="w-4 h-4" />
                     Choose File
                   </Button>
                   {uploadedFile && (
-                    <span className="text-sm text-muted-foreground truncate max-w-[250px]">
+                    <span className="text-sm text-muted-foreground truncate max-w-full sm:max-w-[250px]">
                       {uploadedFile.name}
                     </span>
                   )}
@@ -125,7 +126,7 @@ export default function Text() {
                     placeholder="Enter client's name"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    className="text-base"
+                    className="text-base min-h-[44px]"
                   />
                 </div>
 
@@ -142,7 +143,7 @@ export default function Text() {
                   />
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="schedule" className="text-sm font-medium">
                       Timeline/Schedule
@@ -152,7 +153,7 @@ export default function Text() {
                       placeholder="e.g., 3 months, Q2 2025"
                       value={schedule}
                       onChange={(e) => setSchedule(e.target.value)}
-                      className="text-base"
+                      className="text-base min-h-[44px]"
                     />
                   </div>
 
@@ -165,7 +166,7 @@ export default function Text() {
                       placeholder="e.g., $50,000"
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
-                      className="text-base"
+                      className="text-base min-h-[44px]"
                     />
                   </div>
                 </div>
@@ -203,8 +204,13 @@ export default function Text() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-between items-center pt-4">
-            <Button variant="outline" size="default" onClick={() => navigate("/mascots")}>
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-4 px-4 sm:px-0">
+            <Button 
+              variant="outline" 
+              size="default" 
+              onClick={() => navigate("/mascots")}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
@@ -213,6 +219,7 @@ export default function Text() {
               variant="hero"
               onClick={handleContinue}
               disabled={!clientName.trim() || !projectDetails.trim()}
+              className="w-full sm:w-auto min-h-[44px]"
             >
               Continue to Background
             </Button>

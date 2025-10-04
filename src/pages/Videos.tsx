@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useVideo } from "@/contexts/VideoContext";
 import { ProgressNav } from "@/components/ProgressNav";
-import { Download, Share2, RotateCcw, Play, Pause, ArrowLeft } from "lucide-react";
+import { Download, Share2, RotateCcw, Play, Pause } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -51,13 +51,18 @@ export default function Videos() {
 
   useEffect(() => {
     if (isPlaying && !isGenerating) {
-      const animate = () => {
+      let lastTime = performance.now();
+      const animate = (currentFrameTime: number) => {
+        const deltaTime = currentFrameTime - lastTime;
+        lastTime = currentFrameTime;
+        
         setCurrentTime((prev) => {
-          if (prev >= duration) {
+          const next = prev + (deltaTime / 1000) * 1;
+          if (next >= duration) {
             setIsPlaying(false);
             return duration;
           }
-          return prev + 0.5;
+          return next;
         });
         animationRef.current = requestAnimationFrame(animate);
       };
@@ -74,25 +79,27 @@ export default function Videos() {
     };
   }, [isPlaying, isGenerating, duration]);
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
+  const handlePlayPause = useCallback(() => {
+    setIsPlaying(prev => !prev);
+  }, []);
 
-  const handleSeek = (value: number[]) => {
+  const handleSeek = useCallback((value: number[]) => {
     setCurrentTime(value[0]);
-  };
+  }, []);
 
-  const handleStartOver = () => {
+  const handleStartOver = useCallback(() => {
     navigate("/mascots");
-  };
+  }, [navigate]);
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     toast.info("Video download requires AI video generation service. This feature needs backend integration with services like D-ID or HeyGen.");
-  };
+  }, []);
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     toast.success("Share link copied to clipboard!");
-  };
+  }, []);
+
+  const formattedCurrentTime = useMemo(() => Math.floor(currentTime), [currentTime]);
 
   if (!selectedMascot || !clientName || !selectedBackground) {
     return null;
@@ -101,13 +108,13 @@ export default function Videos() {
   return (
     <div className="min-h-screen bg-background">
       <ProgressNav />
-      <div className="container mx-auto p-6 py-12 space-y-8">
-        <div className="max-w-5xl mx-auto space-y-8">
-          <div className="text-center space-y-2 animate-slide-in-up">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6 sm:space-y-8">
+        <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
+          <div className="text-center space-y-2 animate-slide-in-up px-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
               {isGenerating ? "Generating Your Video" : "Your Video is Ready!"}
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base sm:text-lg">
               {isGenerating
                 ? "Our AI is creating your personalized video presentation..."
                 : "Watch, download, or share your generated video"}
@@ -130,7 +137,7 @@ export default function Videos() {
                     {progress}% complete
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-6 text-center pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-center pt-4">
                   <div className="space-y-2 p-4 rounded-xl bg-background/50">
                     <p className="text-sm text-muted-foreground">Character</p>
                     <p className="font-semibold text-lg">{selectedMascot.name}</p>
@@ -166,11 +173,11 @@ export default function Videos() {
                       />
                       
                       {showScriptInVideo && clientName && (
-                        <div className="absolute bottom-12 left-8 right-8 bg-background/90 backdrop-blur-md p-6 rounded-2xl border border-border/50 shadow-xl space-y-2">
-                          <p className="text-sm font-semibold">Client: {clientName}</p>
+                        <div className="absolute bottom-4 sm:bottom-12 left-4 sm:left-8 right-4 sm:right-8 bg-background/90 backdrop-blur-md p-4 sm:p-6 rounded-2xl border border-border/50 shadow-xl space-y-2">
+                          <p className="text-xs sm:text-sm font-semibold">Client: {clientName}</p>
                           {projectDetails && <p className="text-xs text-muted-foreground line-clamp-2">{projectDetails}</p>}
                           {(schedule || price) && (
-                            <div className="flex gap-4 text-xs text-muted-foreground">
+                            <div className="flex flex-wrap gap-2 sm:gap-4 text-xs text-muted-foreground">
                               {schedule && <span>Timeline: {schedule}</span>}
                               {price && <span>Budget: {price}</span>}
                             </div>
@@ -208,7 +215,7 @@ export default function Videos() {
                       className="cursor-pointer"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{Math.floor(currentTime)}s</span>
+                      <span>{formattedCurrentTime}s</span>
                       <span>{duration}s</span>
                     </div>
                   </div>
@@ -219,7 +226,7 @@ export default function Videos() {
                 <CardContent className="p-8">
                   <div className="space-y-6">
                     <h3 className="font-semibold text-xl">Video Details</h3>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       <div className="space-y-2 p-4 rounded-xl bg-background/50">
                         <p className="text-sm text-muted-foreground">Character</p>
                         <p className="font-medium text-lg">{selectedMascot.name}</p>
@@ -245,20 +252,30 @@ export default function Videos() {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-between items-center pt-4">
-                <Button variant="outline" size="lg" onClick={handleStartOver} className="gap-2">
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-4 px-4 sm:px-0">
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  onClick={handleStartOver} 
+                  className="gap-2 w-full sm:w-auto min-h-[44px]"
+                >
                   <RotateCcw className="w-4 h-4" />
                   Start Over
                 </Button>
-                <div className="flex gap-3">
-                  <Button variant="outline" size="lg" onClick={handleShare} className="gap-2">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    onClick={handleShare} 
+                    className="gap-2 w-full sm:w-auto min-h-[44px]"
+                  >
                     <Share2 className="w-4 h-4" />
                     Share
                   </Button>
                   <Button 
                     size="lg" 
                     onClick={handleDownload} 
-                    className="gap-2 bg-primary hover:bg-primary/90 shadow-[0_0_20px_hsl(190_100%_55%_/_0.3)]"
+                    className="gap-2 bg-primary hover:bg-primary/90 shadow-[0_0_20px_hsl(190_100%_55%_/_0.3)] w-full sm:w-auto min-h-[44px]"
                   >
                     <Download className="w-4 h-4" />
                     Download MP4
