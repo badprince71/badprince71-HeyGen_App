@@ -10,6 +10,8 @@ import Background from "./pages/Background";
 import Videos from "./pages/Videos";
 import MyVideo from "./pages/MyVideo";
 import MyProfile from "./pages/MyProfile";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/video" element={<Videos />} />
             <Route path="/myvideo" element={<MyVideo />} />
             <Route path="/myprofile" element={<MyProfile />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useVideo } from "@/contexts/VideoContext";
 import { ProgressNav } from "@/components/ProgressNav";
+import { Loader2, Upload, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
+import ApiService from "@/services/api";
 import mascotDog from "@/assets/mascot-dog.jpg";
 import mascotCat from "@/assets/mascot-cat.jpg";
 import mascotOwl from "@/assets/mascot-owl.jpg";
@@ -21,15 +25,47 @@ const mascots = [
 
 export default function Mascots() {
   const navigate = useNavigate();
-  const { selectedMascot, setSelectedMascot } = useVideo();
+  const { selectedMascot, setSelectedMascot, uploadedMascotAsset, setUploadedMascotAsset } = useVideo();
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleSelect = (mascot: typeof mascots[0]) => {
     setSelectedMascot(mascot);
+    // Reset uploaded asset when selecting a new mascot
+    setUploadedMascotAsset(null);
   };
 
-  const handleContinue = () => {
-    if (selectedMascot) {
-      navigate("/text");
+  const convertImageToFile = async (imageSrc: string, filename: string): Promise<File> => {
+    const response = await fetch(imageSrc);
+    const blob = await response.blob();
+    return new File([blob], filename, { type: blob.type });
+  };
+
+  const handleContinue = async () => {
+    if (!selectedMascot) return;
+
+    setIsUploading(true);
+    try {
+      // Convert the selected mascot image to a File object
+      const imageFile = await convertImageToFile(
+        selectedMascot.image,
+        `${selectedMascot.name.toLowerCase().replace(/\s+/g, '-')}.jpg`
+      );
+
+      // Upload the mascot to HeyGen API
+      const result = await ApiService.uploadMascot(imageFile);
+
+      if (result.success && result.data) {
+        setUploadedMascotAsset(result.data);
+        toast.success("Mascot uploaded successfully!");
+        navigate("/text");
+      } else {
+        toast.error(result.message || "Failed to upload mascot");
+      }
+    } catch (error) {
+      console.error("Error uploading mascot:", error);
+      toast.error("Failed to upload mascot. Please try again.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -89,10 +125,25 @@ export default function Mascots() {
             size="lg"
             variant="hero"
             onClick={handleContinue}
-            disabled={!selectedMascot}
+            disabled={!selectedMascot || isUploading}
             className="w-full sm:w-auto min-h-[44px]"
           >
-            Continue to Script
+            {isUploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Uploading Mascot...
+              </>
+            ) : uploadedMascotAsset ? (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Mascot Uploaded!
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Continue to Script
+              </>
+            )}
           </Button>
         </div>
       </div>

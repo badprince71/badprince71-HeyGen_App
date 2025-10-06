@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useVideo } from "@/contexts/VideoContext";
 import { ProgressNav } from "@/components/ProgressNav";
 import { ArrowLeft } from "lucide-react";
+import ApiService from "@/services/api";
+import { toast } from "sonner";
 
 const backgrounds = [
   { id: 1, name: "Animated Office", image: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop" },
@@ -27,9 +29,23 @@ export default function Background() {
     setSelectedBackground(background);
   };
 
-  const handleContinue = () => {
-    if (selectedBackground) {
-      navigate("/video");
+  const handleContinue = async () => {
+    if (!selectedBackground) return;
+    try {
+      // Convert selected background URL to a File
+      const response = await fetch(selectedBackground.image);
+      const blob = await response.blob();
+      const file = new File([blob], `${selectedBackground.name.replace(/\s+/g, '-')}.jpg`, { type: blob.type || 'image/jpeg' });
+
+      const res = await ApiService.uploadBackground(file);
+      if (res.success) {
+        toast.success('Background uploaded successfully');
+        navigate("/video");
+      } else {
+        toast.error(res.message || 'Background upload failed');
+      }
+    } catch (e) {
+      toast.error('Background upload failed');
     }
   };
 

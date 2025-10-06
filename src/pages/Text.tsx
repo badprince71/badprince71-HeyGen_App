@@ -9,6 +9,7 @@ import { ArrowLeft, Upload } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { generateScript } from "@/utils/scriptGenerator";
 
 export default function Text() {
   const navigate = useNavigate();
@@ -20,7 +21,8 @@ export default function Text() {
     price, setPrice,
     customerInterest, setCustomerInterest,
     uploadedFile, setUploadedFile, 
-    showScriptInVideo, setShowScriptInVideo 
+    showScriptInVideo, setShowScriptInVideo,
+    setGeneratedScript 
   } = useVideo();
 
   if (!selectedMascot) {
@@ -32,6 +34,16 @@ export default function Text() {
     if (!clientName.trim() || !projectDetails.trim()) {
       toast.error("Please fill in at least client name and project details");
       return;
+    }
+    if (setGeneratedScript) {
+      const script = generateScript({
+        clientName,
+        projectDetails,
+        schedule,
+        price,
+        notes: customerInterest,
+      });
+      setGeneratedScript(script);
     }
     navigate("/background");
   };
