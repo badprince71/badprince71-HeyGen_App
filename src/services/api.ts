@@ -11,6 +11,8 @@ export interface MascotUploadResponse {
   success: boolean;
   message: string;
   data: {
+    image_key: any;
+    data: any;
     asset_id: string;
     status: string;
     url?: string;
@@ -51,15 +53,14 @@ export class ApiService {
   static async uploadMascot(file: File): Promise<ApiResponse<MascotUploadResponse['data']>> {
     const formData = new FormData();
     formData.append('mascot', file);
-    console.log('--------mascot upload54--------');
+
     try {
       const response = await fetch(`${API_BASE_URL}/mascot/upload`, {
         method: 'POST',
         body: formData,
       });
-      
       const data = await response.json();
-      console.log('--------mascot upload62--------', data);      
+      console.log("_____________data_____________________", data);
       if (!response.ok) {
         throw new Error(data.message || 'Upload failed');
       }
@@ -76,7 +77,6 @@ export class ApiService {
   }
 
   static async getAssetStatus(assetId: string): Promise<ApiResponse> {
-    console.log('--------mascot 79--------');
     return this.request(`/mascot/status/${assetId}`);
   }
 
@@ -84,17 +84,20 @@ export class ApiService {
     return this.request('/health');
   }
 
-  static async uploadBackground(file: File): Promise<ApiResponse> {
+  static async uploadBackground(file: File): Promise<ApiResponse<MascotUploadResponse['data']>> {
     const formData = new FormData();
     formData.append('background', file);
-
     try {
+      console.log("_____________formData_____________________", file);
       const response = await fetch(`${API_BASE_URL}/background/upload`, {
         method: 'POST',
         body: formData,
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Background upload failed');
+      console.log("_____________data_____________________", data);
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+      }
       return data;
     } catch (error) {
       console.error('Background upload failed:', error);
@@ -104,6 +107,33 @@ export class ApiService {
         error,
       };
     }
+  }
+
+  static async generateVideo(payload: {
+    video_inputs: Array<any>;
+  }): Promise<ApiResponse> {
+    console.log("_____________generateVideo_____________________", payload);
+    return this.request('/video/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  static async getVideoStatus(videoId: string): Promise<ApiResponse> {
+    return this.request(`/video/status/${videoId}`);
+  }
+
+  static async createAvatar(payload: {
+    name: string;
+    image_key: string;
+  }): Promise<ApiResponse> {
+    console.log("_____________createAvatar_____________________", payload);
+    return this.request('/mascot/create-avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
   }
 }
 

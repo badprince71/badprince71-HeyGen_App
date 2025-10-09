@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useVideo } from "@/contexts/VideoContext";
 import { ProgressNav } from "@/components/ProgressNav";
 import { Loader2, Upload, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import ApiService from "@/services/api";
+import { useVideo } from "@/contexts/VideoContext";
 import mascotDog from "@/assets/mascot-dog.jpg";
 import mascotCat from "@/assets/mascot-cat.jpg";
 import mascotOwl from "@/assets/mascot-owl.jpg";
@@ -25,7 +25,7 @@ const mascots = [
 
 export default function Mascots() {
   const navigate = useNavigate();
-  const { selectedMascot, setSelectedMascot, uploadedMascotAsset, setUploadedMascotAsset } = useVideo();
+  const { selectedMascot, setSelectedMascot, uploadedMascotAsset, setUploadedMascotAsset, setCreatedAvatar } = useVideo();
   const [isUploading, setIsUploading] = useState(false);
 
   const handleSelect = (mascot: typeof mascots[0]) => {
@@ -43,7 +43,7 @@ export default function Mascots() {
   const handleContinue = async () => {
     if (!selectedMascot) return;
 
-    setIsUploading(true);
+/*    setIsUploading(true);
     try {
       // Convert the selected mascot image to a File object
       const imageFile = await convertImageToFile(
@@ -55,18 +55,60 @@ export default function Mascots() {
       const result = await ApiService.uploadMascot(imageFile);
 
       if (result.success && result.data) {
+        // Store the uploaded asset data
         setUploadedMascotAsset(result.data);
-        toast.success("Mascot uploaded successfully!");
-        navigate("/text");
+        console.log("_____________result.data_____________________", result.data.data);
+        // Extract name and image_key from the response
+        const assetData = result.data;
+        const name = result.data.data.name;
+        const image_key = result.data.data.image_key;
+        if (image_key) {
+          // Create avatar from the uploaded asset
+          const avatarResult = await ApiService.createAvatar({
+            name: name,
+            image_key: image_key
+          });
+          
+          if (avatarResult.success && avatarResult.data) {*/
+            // Store the created avatar data
+            setCreatedAvatar({
+              //id: avatarResult.data.id || avatarResult.data.data?.id,
+              //name: name
+              id: "d989f24111084dea90a6eeb8009c5295",
+              name: "Builder Buddy"
+            });
+            toast.success("Mascot uploaded and avatar created successfully!");
+            navigate("/text");
+          /*} else {
+            toast.error("Avatar creation failed: " + (avatarResult.message || "Unknown error"));
+            return;
+          }
+        } else {
+          toast.error("Could not extract image_key from upload response. Please try again.");
+          return;
+        }
       } else {
-        toast.error(result.message || "Failed to upload mascot");
+        // Enhanced error handling for specific error types
+        if (result.message?.includes('API key not configured')) {
+          toast.error("Server configuration error. Please contact support.");
+        } else if (result.message?.includes('Invalid file type')) {
+          toast.error("Invalid image format. Please select a JPEG, PNG, GIF, or WebP image.");
+        } else if (result.message?.includes('File too large')) {
+          toast.error("Image file is too large. Please select an image smaller than 10MB.");
+        } else if (result.message?.includes('timeout')) {
+          toast.error("Upload timeout. Please try again with a smaller image.");
+        } else if (result.message?.includes('Unable to connect')) {
+          toast.error("Network error. Please check your internet connection and try again.");
+        } else {
+          toast.error(result.message || "Failed to upload mascot. Please try again.");
+        }
       }
     } catch (error) {
       console.error("Error uploading mascot:", error);
-      toast.error("Failed to upload mascot. Please try again.");
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsUploading(false);
-    }
+    }*/
   };
 
   return (

@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useVideo } from "@/contexts/VideoContext";
 import { ProgressNav } from "@/components/ProgressNav";
 import { Download, Share2, RotateCcw, Play, Pause } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import { useVideo } from "@/contexts/VideoContext";
+import ApiService from "@/services/api";
 
 export default function Videos() {
   const navigate = useNavigate();
+  const location = useLocation() as any;
   const { 
     selectedMascot, 
     clientName,
@@ -25,8 +27,72 @@ export default function Videos() {
   const [progress, setProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration] = useState(100); // Mock duration
+  const [duration, setDuration] = useState(0);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const animationRef = useRef<number>();
+
+  // Try to obtain a videoId passed to this page via navigation state or query string
+  const initialVideoId: string | null = (location?.state && location.state.videoId) || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('videoId') : null);
+
+  // Function to poll video status
+  const pollVideoStatus = async (videoId: string) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    
+    const poll = async () => {
+      try {
+        
+        const res = await ApiService.getVideoStatus(videoId);
+        
+        if (res.success && res.data) {
+          const status = res.data.status;
+          const videoUrl = res.data.video_url;
+          
+          console.log("Video status check:", { videoId, status, videoUrl, attempts });
+          
+          if (status === 'completed' && videoUrl) {
+            setIsGenerating(false);
+            setVideoUrl(videoUrl);
+            toast.success('Video generated successfully!');
+            return;
+          } else if (status === 'failed' || status === 'error') {
+            setIsGenerating(false);
+            setVideoError('Video generation failed. Please try again.');
+            return;
+          } else if (status === 'processing' || status === 'pending') {
+            // Update progress based on attempts
+            const progress = Math.min(90, (attempts / maxAttempts) * 100);
+            setProgress(progress);
+            
+            // Continue polling
+            attempts++;
+            if (attempts < maxAttempts) {
+              setTimeout(poll, 5000); // Poll every 5 seconds
+            } else {
+              setIsGenerating(false);
+              setVideoError('Video generation is taking longer than expected. Please check back later.');
+            }
+          }
+        } else {
+          setIsGenerating(false);
+          setVideoError('Failed to check video status. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error polling video status:', error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000); // Retry after 5 seconds
+        } else {
+          setIsGenerating(false);
+          setVideoError('Failed to check video status. Please try again.');
+        }
+      }
+    };
+    
+    poll();
+  };
 
   useEffect(() => {
     if (!selectedMascot || !clientName || !selectedBackground) {
@@ -34,56 +100,70 @@ export default function Videos() {
       return;
     }
 
-    // Simulate video generation
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsGenerating(false);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [selectedMascot, clientName, selectedBackground, navigate]);
-
-  useEffect(() => {
-    if (isPlaying && !isGenerating) {
-      let lastTime = performance.now();
-      const animate = (currentFrameTime: number) => {
-        const deltaTime = currentFrameTime - lastTime;
-        lastTime = currentFrameTime;
-        
-        setCurrentTime((prev) => {
-          const next = prev + (deltaTime / 1000) * 1;
-          if (next >= duration) {
-            setIsPlaying(false);
-            return duration;
-          }
-          return next;
-        });
-        animationRef.current = requestAnimationFrame(animate);
-      };
-      animationRef.current = requestAnimationFrame(animate);
-    } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+    // If no videoId is available, show error
+    if (!initialVideoId) {
+      setVideoError('No video ID found. Please go back and generate a video.');
+      setIsGenerating(false);
+      return;
     }
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+
+    // Start polling for video status
+    pollVideoStatus(initialVideoId);
+  }, [selectedMascot, clientName, selectedBackground, navigate, initialVideoId]);
+
+
+  // Handle video events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
     };
-  }, [isPlaying, isGenerating, duration]);
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+    };
+
+    const handleError = () => {
+      setVideoError('Failed to load video');
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('ended', handleEnded);
+    video.addEventListener('error', handleError);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('error', handleError);
+    };
+  }, [videoUrl]);
 
   const handlePlayPause = useCallback(() => {
-    setIsPlaying(prev => !prev);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play();
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
   }, []);
 
   const handleSeek = useCallback((value: number[]) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.currentTime = value[0];
     setCurrentTime(value[0]);
   }, []);
 
@@ -92,14 +172,33 @@ export default function Videos() {
   }, [navigate]);
 
   const handleDownload = useCallback(() => {
-    toast.info("Video download requires AI video generation service. This feature needs backend integration with services like D-ID or HeyGen.");
-  }, []);
+    if (videoUrl) {
+      // Create a temporary link to download the video
+      const link = document.createElement('a');
+      link.href = videoUrl;
+      link.download = `heygen-video-${Date.now()}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Video download started!");
+    } else {
+      toast.error("No video available to download");
+    }
+  }, [videoUrl]);
 
-  const handleShare = useCallback(() => {
-    toast.success("Share link copied to clipboard!");
-  }, []);
+  const handleShare = useCallback(async () => {
+    if (videoUrl) {
+      try {
+        await navigator.clipboard.writeText(videoUrl);
+        toast.success("Video link copied to clipboard!");
+      } catch (error) {
+        toast.error("Failed to copy link to clipboard");
+      }
+    } else {
+      toast.error("No video available to share");
+    }
+  }, [videoUrl]);
 
-  const formattedCurrentTime = useMemo(() => Math.floor(currentTime), [currentTime]);
 
   if (!selectedMascot || !clientName || !selectedBackground) {
     return null;
@@ -158,67 +257,94 @@ export default function Videos() {
               <Card className="overflow-hidden animate-slide-in-up bg-card/30 backdrop-blur-sm border-border/50 shadow-2xl" style={{ animationDelay: "100ms" }}>
                 <CardContent className="p-0">
                   <div className="relative aspect-video bg-gradient-to-br from-background to-muted/30">
-                    <img
-                      src={selectedBackground.image}
-                      alt="Video background"
-                      className="absolute inset-0 w-full h-full object-cover opacity-60"
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8">
-                      <img
-                        src={selectedMascot.image}
-                        alt={selectedMascot.name}
-                        className={`w-72 h-72 rounded-3xl object-cover shadow-2xl transition-transform duration-300 ${
-                          isPlaying ? 'animate-float' : ''
-                        }`}
+                    {videoUrl && !videoError ? (
+                      <video
+                        ref={videoRef}
+                        src={videoUrl}
+                        className="w-full h-full object-cover"
+                        controls={false}
+                        preload="metadata"
                       />
-                      
-                      {showScriptInVideo && clientName && (
-                        <div className="absolute bottom-4 sm:bottom-12 left-4 sm:left-8 right-4 sm:right-8 bg-background/90 backdrop-blur-md p-4 sm:p-6 rounded-2xl border border-border/50 shadow-xl space-y-2">
-                          <p className="text-xs sm:text-sm font-semibold">Client: {clientName}</p>
-                          {projectDetails && <p className="text-xs text-muted-foreground line-clamp-2">{projectDetails}</p>}
-                          {(schedule || price) && (
-                            <div className="flex flex-wrap gap-2 sm:gap-4 text-xs text-muted-foreground">
-                              {schedule && <span>Timeline: {schedule}</span>}
-                              {price && <span>Budget: {price}</span>}
-                            </div>
-                          )}
+                    ) : videoError ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8">
+                        <div className="text-center space-y-4">
+                          <p className="text-red-500 font-semibold">Video Error</p>
+                          <p className="text-muted-foreground text-sm">{videoError}</p>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setVideoError(null);
+                              if (initialVideoId) {
+                                // Retry polling
+                                const pollStatus = async (videoId: string) => {
+                                  const ApiService = (await import("@/services/api")).default;
+                                  try {
+                                    const res = await ApiService.getVideoStatus(videoId);
+                                    const status = (res as any)?.data?.status;
+                                    const videoUrl = (res as any)?.data?.video_url;
+                                    if (status === 'completed' && videoUrl) {
+                                      setVideoUrl(videoUrl);
+                                    }
+                                  } catch (error) {
+                                    console.error('Error retrying video status:', error);
+                                  }
+                                };
+                                pollStatus(initialVideoId);
+                              }
+                            }}
+                          >
+                            Retry
+                          </Button>
                         </div>
-                      )}
-
-                      <Button
-                        size="lg"
-                        onClick={handlePlayPause}
-                        className="mt-6 gap-2 bg-primary hover:bg-primary/90 shadow-[0_0_30px_hsl(190_100%_55%_/_0.4)] px-8"
-                      >
-                        {isPlaying ? (
-                          <>
-                            <Pause className="w-5 h-5" />
-                            Pause
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-5 h-5" />
-                            Play Video
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8">
+                        <div className="text-center space-y-4">
+                          <p className="text-muted-foreground">Loading video...</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Overlay with play button */}
+                    {videoUrl && !videoError && (
+                      <div className="absolute inset-0 flex items-center justify-center z-10">
+                        <Button
+                          size="lg"
+                          onClick={handlePlayPause}
+                          className="gap-2 bg-primary/90 hover:bg-primary shadow-[0_0_30px_hsl(190_100%_55%_/_0.4)] px-8"
+                        >
+                          {isPlaying ? (
+                            <>
+                              <Pause className="w-5 h-5" />
+                              Pause
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-5 h-5" />
+                              Play Video
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   
                   {/* Video Controls */}
-                  <div className="bg-card/80 backdrop-blur-sm p-6 space-y-3">
-                    <Slider
-                      value={[currentTime]}
-                      max={duration}
-                      step={0.1}
-                      onValueChange={handleSeek}
-                      className="cursor-pointer"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{formattedCurrentTime}s</span>
-                      <span>{duration}s</span>
+                  {videoUrl && !videoError && duration > 0 && (
+                    <div className="bg-card/80 backdrop-blur-sm p-6 space-y-3">
+                      <Slider
+                        value={[currentTime]}
+                        max={duration}
+                        step={0.1}
+                        onValueChange={handleSeek}
+                        className="cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{Math.floor(currentTime)}s</span>
+                        <span>{Math.floor(duration)}s</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -283,11 +409,13 @@ export default function Videos() {
                 </div>
               </div>
 
-              <div className="p-6 bg-accent/10 border border-accent/20 rounded-xl">
-                <p className="text-sm text-muted-foreground">
-                  <strong className="text-accent">Note:</strong> Full video generation with animated lip-sync mascots requires AI video generation service integration (D-ID, HeyGen, or similar). This demo shows the UI/UX flow. Enable Lovable Cloud to add real video generation capabilities.
-                </p>
-              </div>
+              {!videoUrl && (
+                <div className="p-6 bg-accent/10 border border-accent/20 rounded-xl">
+                  <p className="text-sm text-muted-foreground">
+                    <strong className="text-accent">Note:</strong> Video generation is in progress. Once complete, you'll be able to play, download, and share your generated video.
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>

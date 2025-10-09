@@ -1,10 +1,12 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+﻿import { createContext, useContext, useState, ReactNode } from "react";
 
 interface VideoContextType {
   selectedMascot: { id: number; name: string; image: string; category: string } | null;
   setSelectedMascot: (mascot: { id: number; name: string; image: string; category: string } | null) => void;
-  uploadedMascotAsset: { asset_id: string; status: string; url?: string } | null;
-  setUploadedMascotAsset: (asset: { asset_id: string; status: string; url?: string } | null) => void;
+  uploadedMascotAsset: { asset_id: string; status: string; url?: string; name?: string; image_key?: string; data?: any } | null;
+  setUploadedMascotAsset: (asset: { asset_id: string; status: string; url?: string; name?: string; image_key?: string; data?: any } | null) => void;
+  createdAvatar: { id: string; name: string } | null;
+  setCreatedAvatar: (avatar: { id: string; name: string } | null) => void;
   generatedScript?: string;
   setGeneratedScript?: (script: string) => void;
   clientName: string;
@@ -29,7 +31,8 @@ const VideoContext = createContext<VideoContextType | undefined>(undefined);
 
 export function VideoProvider({ children }: { children: ReactNode }) {
   const [selectedMascot, setSelectedMascot] = useState<{ id: number; name: string; image: string; category: string } | null>(null);
-  const [uploadedMascotAsset, setUploadedMascotAsset] = useState<{ asset_id: string; status: string; url?: string } | null>(null);
+  const [uploadedMascotAsset, setUploadedMascotAsset] = useState<{ asset_id: string; status: string; url?: string; name?: string; image_key?: string; data?: any } | null>(null);
+  const [createdAvatar, setCreatedAvatar] = useState<{ id: string; name: string } | null>(null);
   const [generatedScript, setGeneratedScript] = useState<string>("");
   const [clientName, setClientName] = useState("");
   const [projectDetails, setProjectDetails] = useState("");
@@ -47,8 +50,10 @@ export function VideoProvider({ children }: { children: ReactNode }) {
         setSelectedMascot,
         uploadedMascotAsset,
         setUploadedMascotAsset,
-      generatedScript,
-      setGeneratedScript,
+        createdAvatar,
+        setCreatedAvatar,
+        generatedScript,
+        setGeneratedScript,
         clientName,
         setClientName,
         projectDetails,

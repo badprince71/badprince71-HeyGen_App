@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useVideo } from "@/contexts/VideoContext";
 import { ProgressNav } from "@/components/ProgressNav";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2, Upload } from "lucide-react";
 import ApiService from "@/services/api";
 import { toast } from "sonner";
 
@@ -18,8 +19,9 @@ const backgrounds = [
 
 export default function Background() {
   const navigate = useNavigate();
-  const { selectedMascot, clientName, projectDetails, selectedBackground, setSelectedBackground } = useVideo();
-
+  const { selectedMascot, clientName, projectDetails, selectedBackground, setSelectedBackground, createdAvatar } = useVideo();
+  const [isUploading, setIsUploading] = useState(false as any);
+  
   if (!selectedMascot || !clientName) {
     navigate("/mascots");
     return null;
@@ -31,21 +33,72 @@ export default function Background() {
 
   const handleContinue = async () => {
     if (!selectedBackground) return;
+    if (!createdAvatar?.id) {
+      toast.error('Avatar not created. Please go back and select a mascot.');
+      return;
+    }
+    
+    setIsUploading(true);
     try {
-      // Convert selected background URL to a File
-      const response = await fetch(selectedBackground.image);
-      const blob = await response.blob();
-      const file = new File([blob], `${selectedBackground.name.replace(/\s+/g, '-')}.jpg`, { type: blob.type || 'image/jpeg' });
+      // Fetch remote image and convert to File for upload
+      const resp = await fetch(selectedBackground.image);
+      const blob = await resp.blob();
+      const file = new File([blob], `${selectedBackground.name.replace(/\s+/g,'-').toLowerCase()}.jpg`, { type: blob.type || 'image/jpeg' });
+      const result = await ApiService.uploadBackground(file);
+      if (!result.success || !result.data) {
+        toast.error(result.message || 'Failed to upload background');
+        setIsUploading(false);
+        return;
+      }
 
-      const res = await ApiService.uploadBackground(file);
-      if (res.success) {
-        toast.success('Background uploaded successfully');
-        navigate("/video");
+      // Extract asset id from various possible response shapes (mock or real)
+      const anyResult: any = result as any;
+      const assetId = (result.data && result.data.asset_id) || (anyResult.data && anyResult.data.data && anyResult.data.data.id);
+      if (!assetId) {
+        toast.error('Could not read background asset id');
+        setIsUploading(false);
+        return;
+      }
+      console.log("_____________assetId_____________________", assetId);
+      console.log("_____________createdAvatar.id_____________________", createdAvatar.id);
+      // Build HeyGen video payload
+      const payload = {
+        video_inputs: [
+          {
+            character: {
+              type: "talking_photo",
+              talking_photo_id: createdAvatar.id,
+              avatar_style: "normal"
+            },
+            voice: {
+              type: "text",
+              input_text: "With HeyGen, it is very easy to create avatar videos with custom backgrounds.",
+              voice_id: "d7bbcdd6964c47bdaae26decade4a933"
+            },
+            background: {
+              type: "image",
+              image_asset_id: assetId
+            }
+          }
+        ]
+      };
+
+      const gen = await ApiService.generateVideo(payload);
+      if (gen.success) {
+        const videoId = (gen as any)?.data?.video_id || (gen as any)?.data?.data?.video_id;
+        toast.success('Video generation started');
+        if (videoId) {
+          navigate('/video', { state: { videoId } });
+        } else {
+          navigate('/video');
+        }
       } else {
-        toast.error(res.message || 'Background upload failed');
+        toast.error(gen.message || 'Failed to start video generation');
       }
     } catch (e) {
-      toast.error('Background upload failed');
+      toast.error('Failed to upload background');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -137,10 +190,20 @@ export default function Background() {
               size="lg"
               variant="hero"
               onClick={handleContinue}
-              disabled={!selectedBackground}
+              disabled={!selectedBackground || isUploading}
               className="w-full sm:w-auto min-h-[44px]"
             >
-              Generate Video
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading Background...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Generate Video
+                </>
+              )}
             </Button>
           </div>
         </div>

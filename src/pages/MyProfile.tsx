@@ -47,7 +47,6 @@ const mascotOptions = [
 
 export default function MyProfile() {
   const navigate = useNavigate();
-  // Mock user data - replace with actual user data from auth context
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [selectedMascot, setSelectedMascot] = useState<string>("robot");
   const [videosCreated] = useState(47);
@@ -89,12 +88,10 @@ export default function MyProfile() {
   };
 
   const onProfileSubmit = (data: ProfileFormData) => {
-    console.log("Profile updated:", data);
     toast.success("Profile updated successfully!");
   };
 
   const onPasswordSubmit = (data: PasswordFormData) => {
-    console.log("Password changed");
     toast.success("Password changed successfully!");
     resetPassword();
   };
