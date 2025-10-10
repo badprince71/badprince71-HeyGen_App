@@ -19,7 +19,7 @@ const backgrounds = [
 
 export default function Background() {
   const navigate = useNavigate();
-  const { selectedMascot, clientName, projectDetails, selectedBackground, setSelectedBackground, createdAvatar } = useVideo();
+  const { selectedMascot, clientName, projectDetails, selectedBackground, setSelectedBackground, createdAvatar, generatedScript } = useVideo();
   const [isUploading, setIsUploading] = useState(false as any);
   
   if (!selectedMascot || !clientName) {
@@ -72,7 +72,7 @@ export default function Background() {
             },
             voice: {
               type: "text",
-              input_text: "With HeyGen, it is very easy to create avatar videos with custom backgrounds.",
+              input_text: generatedScript || "With HeyGen, it is very easy to create avatar videos with custom backgrounds.",
               voice_id: "d7bbcdd6964c47bdaae26decade4a933"
             },
             background: {
